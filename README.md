@@ -1,10 +1,12 @@
-# Image Processing for Space Economy
+# Foreground vs Background Segmentation
   
 
 ## Introduction  
 This repository will contain code and documentation concerning the final project for the course *Signal, Image & Video* taught at **University of Trento**.  
 
-[INSERT FURTHER EXPLANATIONS HERE]  
+The aim of the project is to develop an "video-conferencing-like" algorithm to segment background and foreground, in order to run an image composition technique for background substitution. 
+
+[ ADD EXAMPLES ]
 
 ## Installation  
 The source code of the project is written in **Python 3.7**.  
@@ -20,7 +22,10 @@ $ conda activate <your-env-name>
 ```  
 
 ## What's inside this repo?  
-[INSERT FURTHER EXPLANATIONS HERE]  
+Different proposed techniques are provided within different python files. 
+- The default implementation inside __main.py__  uses gray scale frame differencing in order to segment the foreground and the background;  
+- An improved implementation can be found in __main_hsv.py__ , where the HSV colorspace is leveraged in order to take into account the contribution of both brightness and saturation to segment the background and the foreground;  
+- A customizable implementation in __main_trackbars.py__ lets users interactively configure proper values for the thresholds related to the saturation and the brightness masks.
 
 ## Run the code  
 [INSERT FURTHER EXPLANATIONS HERE]  
