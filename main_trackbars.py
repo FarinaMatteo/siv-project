@@ -9,7 +9,7 @@ fps = int(cap.get(cv2.CAP_PROP_FPS))
 ms = int(1000/fps)
 
 # define the variables for image-processing tasks
-kernel = np.ones((3,3), dtype='uint8')
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(3,5))
 n_rows = 480
 n_cols = 720
 dst_size = (n_cols, n_rows)
@@ -17,6 +17,8 @@ dst_shape = (n_rows, n_cols, 3)
 sat_thresh = randint(0, 255)
 val_thresh = randint(0, 255)
 bg_frame_limit = fps * 3  # number of frames in 3 seconds
+gauss_kernel = (15,15)
+median_ksize = 11
 
 # setup an image to replace the background
 bg_pic_path = "/home/teofa/Pictures/Background/tux_wallpaper.jpg"
@@ -60,7 +62,7 @@ def run():
             # otherwise, perform basic operations on the current frame
             frame = cv2.resize(frame, dst_size)
             hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            hsv_frame_blurred = cv2.GaussianBlur(hsv_frame, (5,5), sigmaX=2, sigmaY=2)
+            hsv_frame_blurred = cv2.GaussianBlur(hsv_frame, gauss_kernel, sigmaX=2, sigmaY=2)
             
             # build a model for the background during the first frames
             if frame_count < bg_frame_limit:
@@ -78,7 +80,7 @@ def run():
                 r3, v_diff_thresh = cv2.threshold(v_diff, val_thresh, 255, cv2.THRESH_BINARY)
                 # take into account contribution of saturation and value (aka 'brightness')
                 # clean the saturation mask beforehand, it usually is more unstable
-                s_diff_thresh_median = cv2.medianBlur(s_diff_thresh, ksize=5)
+                s_diff_thresh_median = cv2.medianBlur(s_diff_thresh, ksize=median_ksize)
                 fg_mask = s_diff_thresh_median + v_diff_thresh
                 fg_mask_closed = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel=kernel, iterations=3)
                 fg_mask_eroded = cv2.erode(fg_mask_closed, kernel=kernel, iterations=1)
