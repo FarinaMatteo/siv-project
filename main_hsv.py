@@ -1,3 +1,19 @@
+"""
+Background vs Foreground Image segmentation. The goal is to produce a segmentation map that imitates
+videocalls tools like the ones implemented in Google Meet, Zoom without using Deep Learning- or Machine Learning-
+based techniques.  
+This script does the following:  
+- builds a background model using the first 3s of the video, acting on the HSV colorspace;  
+- performs frame differencing in the HSV domain;  
+- runs LP filtering (median-filter) on the Saturation difference;  
+- uses Otsu's technique to threshold the saturation and the brightness difference;  
+- concatenates the saturation and the brightness masks to produce the foreground mask;  
+- uses the foreground mask, the current video stream and a pre-defined background picture to produce the final output.  
+  
+Authors: M. Farina, F. Diprima - University of Trento
+Last Update (dd/mm/yyyy): 28/03/2021 
+"""
+
 import cv2
 import time
 import numpy as np
