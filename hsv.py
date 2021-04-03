@@ -8,10 +8,11 @@ This script does the following:
 - runs LP filtering (median-filter) on the Saturation difference;  
 - uses Otsu's technique to threshold the saturation and the brightness difference;  
 - concatenates the saturation and the brightness masks to produce the foreground mask;  
+- runs morphological operators one the mask (closing and dilation) with a 3x5 ellipse (resembles the shape of a human face);  
 - uses the foreground mask, the current video stream and a pre-defined background picture to produce the final output.  
   
 Authors: M. Farina, F. Diprima - University of Trento
-Last Update (dd/mm/yyyy): 28/03/2021 
+Last Update (dd/mm/yyyy): 03/04/2021 
 """
 
 import cv2
@@ -22,6 +23,12 @@ import numpy as np
 cap = cv2.VideoCapture(0)
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 ms = int(1000/fps)
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+# initialize video writer
+codec = cv2.VideoWriter_fourcc(*'mp4v')
+writer = cv2.VideoWriter('report_videos/hsv.mp4', codec, fps, frameSize=(width, height))
 
 # define the variables for image-processing tasks
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(3,5))
@@ -34,7 +41,7 @@ gauss_kernel = (15,15)
 median_ksize = 11
 
 # setup an image to replace the background
-bg_pic_path = "/home/teofa/Pictures/Background/tux_wallpaper.jpg"
+bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
 bg_pic = cv2.imread(bg_pic_path)
 bg_pic = cv2.resize(bg_pic, dst_size)
 
@@ -83,7 +90,7 @@ def run():
                 s_diff_thresh_median = cv2.medianBlur(s_diff_thresh, ksize=median_ksize)
                 fg_mask = s_diff_thresh_median + v_diff_thresh
                 fg_mask_closed = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel=kernel, iterations=10)
-                fg_mask_dilated = cv2.dilate(fg_mask_closed, kernel=kernel, iterations=1)
+                fg_mask_dilated = cv2.dilate(fg_mask_closed, kernel=kernel, iterations=3)
                 # compute the actual foreground and background
                 foreground = cv2.bitwise_and(frame, frame, mask=fg_mask_dilated)
                 background = bg_pic - cv2.bitwise_and(bg_pic, bg_pic, mask=fg_mask_dilated)
@@ -95,6 +102,10 @@ def run():
                 # quit if needed
                 if cv2.waitKey(ms) & 0xFF==ord('q'):
                     break
+
+                if writer:
+                    writer.write(cv2.resize(out, dsize=(width, height)))
+                
                 # keep track of time
                 time_out = time.perf_counter()
                 time_diff = time_out - time_in
@@ -105,6 +116,8 @@ def run():
     print("Average Time x Frame: ", round(np.sum(np.array(time_lst))/len(time_lst), 2))
     cv2.destroyAllWindows()
     cap.release()
+    if writer:
+        writer.release()
 
 
 
