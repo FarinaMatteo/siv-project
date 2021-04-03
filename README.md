@@ -24,8 +24,9 @@ $ conda activate <your-env-name>
 ## What's inside this repo?  
 Different proposed techniques are provided within different python files. 
 - The default implementation inside __main.py__  uses gray scale frame differencing in order to segment the foreground and the background;  
-- An improved implementation can be found in __main_hsv.py__ , where the HSV colorspace is leveraged in order to take into account the contribution of both brightness and saturation to segment the background and the foreground;  
-- A customizable implementation in __main_trackbars.py__ lets users interactively configure proper values for the thresholds related to the saturation and the brightness masks.
+- An improved implementation can be found in __hsv.py__ , where the HSV colorspace is leveraged in order to take into account the contribution of both brightness and saturation to segment the background and the foreground;  
+- A customizable implementation in __trackbars.py__ lets users interactively configure proper values for the thresholds related to the saturation and the brightness masks.  
+- A latter script allows to use the Optical Flow theory in order to keep track of the foreground mask over time. This can be found in __hsv_optflow.py__.
 
 ## Run the code  
 [INSERT FURTHER EXPLANATIONS HERE]  
