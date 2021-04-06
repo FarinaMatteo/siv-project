@@ -45,8 +45,8 @@ n_cols = 720
 dst_size = (n_cols, n_rows)
 dst_shape = (n_rows, n_cols, 3)
 bg_frame_limit = fps * 3  # number of frames in 3 seconds
-gauss_kernel = (15,15)
-median_ksize = 11
+gauss_kernel = (25,25)
+median_ksize = 15
 
 # setup an image to replace the background
 bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
@@ -171,10 +171,12 @@ def run():
                     frame_count = -1
                     hsv_bg = np.zeros(dst_shape, dtype='uint16')
                 
-
-                if writer:
-                    writer.write(cv2.resize(out, dsize=(width, height)))
+                # if writer:
+                #     writer.write(cv2.resize(out, dsize=(width, height)))
                 
+                # if mask_saved and frame_count % 10 == 0:
+                #     cv2.imwrite("report_imgs/optflow/binary_masks/{}.jpg".format(frame_count), fg_mask_closed)
+                #     cv2.imwrite("report_imgs/optflow/outputs/{}.jpg".format(frame_count), out)
 
                 # keep track of time
                 time_out = time.perf_counter()

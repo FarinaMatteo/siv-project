@@ -40,8 +40,8 @@ dst_shape = (n_rows, n_cols, 3)
 sat_thresh = randint(0, 255)
 val_thresh = randint(0, 255)
 bg_frame_limit = fps * 3  # number of frames in 3 seconds
-gauss_kernel = (15,15)
-median_ksize = 11
+gauss_kernel = (25,25)
+median_ksize = 15
 
 # setup an image to replace the background
 bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
@@ -118,6 +118,14 @@ def run():
                 if cv2.waitKey(ms) & 0xFF==ord('q'):
                     break
                 
+                # if frame_count % 10 == 0:
+                #     cv2.imwrite("report_imgs/trackbars/gray_masks/saturation/{}.jpg".format(frame_count), s_diff)
+                #     cv2.imwrite("report_imgs/trackbars/gray_masks/value/{}.jpg".format(frame_count), v_diff)
+                #     cv2.imwrite("report_imgs/trackbars/binary_masks/saturation/{}.jpg".format(frame_count), s_diff_thresh_median)
+                #     cv2.imwrite("report_imgs/trackbars/binary_masks/value/{}.jpg".format(frame_count), v_diff_thresh)
+                #     cv2.imwrite("report_imgs/trackbars/binary_masks/combined/{}.jpg".format(frame_count), fg_mask_dilated)
+                #     cv2.imwrite("report_imgs/trackbars/outputs/{}.jpg".format(frame_count), out)
+
                 if writer:
                     writer.write(cv2.resize(out, dsize=(width, height)))
                 

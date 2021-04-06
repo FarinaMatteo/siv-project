@@ -91,12 +91,20 @@ def run():
                 
                 # display the output and the masks
                 cv2.imshow("Output", out_otsu)
+
+                # write imgs
+                # if frame_count % 10 == 0:
+                #     cv2.imwrite("report_imgs/grayscale/gray_masks/{}.jpg".format(frame_count), diff)
+                #     cv2.imwrite("report_imgs/grayscale/binary_masks/{}.jpg".format(frame_count), fg_mask_otsu_eroded)
+                #     cv2.imwrite("report_imgs/grayscale/outputs/{}.jpg".format(frame_count), out_otsu)
+
+
                 # quit if needed
                 if cv2.waitKey(ms) & 0xFF==ord('q'):
                     break
 
-                if writer:
-                    writer.write(cv2.resize(out_otsu, dsize=(width, height)))
+                # if writer:
+                #     writer.write(cv2.resize(out_otsu, dsize=(width, height)))
                 
             
             frame_count += 1
