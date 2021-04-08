@@ -15,46 +15,38 @@ Authors: M. Farina, F. Diprima - University of Trento
 Last Update (dd/mm/yyyy): 03/04/2021 
 """
 
+import os
 import cv2
 import time
 import numpy as np
-
-# initialize video capture
-cap = cv2.VideoCapture(0)
-fps = int(cap.get(cv2.CAP_PROP_FPS))
-ms = int(1000/fps)
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-# initialize video writer
-codec = cv2.VideoWriter_fourcc(*'mp4v')
-writer = cv2.VideoWriter('report_videos/hsv.mp4', codec, fps, frameSize=(width, height))
-
-# define the variables for image-processing tasks
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(3,5))
-n_rows = 480
-n_cols = 720
-dst_size = (n_cols, n_rows)
-dst_shape = (n_rows, n_cols, 3)
-bg_frame_limit = fps * 3  # number of frames in 3 seconds
-gauss_kernel = (25,25)
-median_ksize = 15
-
-# setup an image to replace the background
-bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
-bg_pic = cv2.imread(bg_pic_path)
-bg_pic = cv2.resize(bg_pic, dst_size)
+from helpers.variables import *
+from helpers.utils import build_argparser, codec_from_ext, make_folder, recursive_clean
 
 
-def run():
+def run(**kwargs):
     """
-        Main loop for background removal. Uses frame differencing together with
-        morphological operators to separate background from foreground for videoconferencing.
+        Main loop for background removal.
     """
     time_lst = [0]
     
+    # setup an image for the background
+    bg_pic_path = kwargs['background']
+    bg_pic = cv2.imread(bg_pic_path)
+    bg_pic = cv2.resize(bg_pic, dst_size)
+
+    # setup the video writer if needed
+    writer = None
+    if kwargs["output_video"]:
+        codec = codec_from_ext(kwargs["output_video"])
+        writer = cv2.VideoWriter(kwargs["output_video"], codec, fps, frameSize=(width, height))
+
+    # create the output frame folder if needed
+    if kwargs["frame_folder"]:
+        if kwargs["refresh"]: recursive_clean(kwargs["frame_folder"])
+        make_folder(kwargs["frame_folder"])
+
     # initialize background
-    hsv_bg = np.zeros(dst_shape, dtype='uint16')
+    hsv_bg = np.zeros(dst_shape_multi, dtype='uint16')
 
     # start looping through frames
     frame_count = 0
@@ -81,39 +73,40 @@ def run():
                 time_in = time.perf_counter()
                 diff = cv2.absdiff(hsv_frame_blurred, hsv_bg)
                 h_diff, s_diff, v_diff = cv2.split(diff)
+                
                 # automatic global thresholding with Otsu's technique
                 r1, h_diff_thresh = cv2.threshold(h_diff, 1, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
                 r2, s_diff_thresh = cv2.threshold(s_diff, 1, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
                 r3, v_diff_thresh = cv2.threshold(v_diff, 1, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+                
                 # take into account contribution of saturation and value (aka 'brightness')
                 # clean the saturation mask beforehand, it usually is more unstable
                 s_diff_thresh_median = cv2.medianBlur(s_diff_thresh, ksize=median_ksize)
                 fg_mask = s_diff_thresh_median + v_diff_thresh
                 fg_mask_closed = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel=kernel, iterations=10)
                 fg_mask_dilated = cv2.dilate(fg_mask_closed, kernel=kernel, iterations=3)
+                
                 # compute the actual foreground and background
                 foreground = cv2.bitwise_and(frame, frame, mask=fg_mask_dilated)
                 background = bg_pic - cv2.bitwise_and(bg_pic, bg_pic, mask=fg_mask_dilated)
+                
                 # ... and add them to generate the output image
                 out = cv2.add(foreground, background)
+                
                 # display the output and the masks
-                cv2.imshow("Background vs Foreground", cv2.hconcat([background, foreground]))
                 cv2.imshow("Output", out)
+        
+                # save frames on the fs if the user requested it
+                if kwargs["frame_folder"] and frame_count % kwargs["throttle"] == 0:
+                    cv2.imwrite(os.path.join(kwargs["frame_folder"], "{}.jpg".format(frame_count - bg_frame_limit + 1)), out)
+
+                # write the video on the fs if the user requested it
+                if writer:
+                    writer.write(cv2.resize(out, dsize=(width, height)))
+                
                 # quit if needed
                 if cv2.waitKey(ms) & 0xFF==ord('q'):
                     break
-
-                # write imgs
-                # if frame_count % 10 == 0:
-                #     cv2.imwrite("report_imgs/hsv/gray_masks/saturation/{}.jpg".format(frame_count), s_diff)
-                #     cv2.imwrite("report_imgs/hsv/gray_masks/value/{}.jpg".format(frame_count), v_diff)
-                #     cv2.imwrite("report_imgs/hsv/binary_masks/saturation/{}.jpg".format(frame_count), s_diff_thresh_median)
-                #     cv2.imwrite("report_imgs/hsv/binary_masks/value/{}.jpg".format(frame_count), v_diff_thresh)
-                #     cv2.imwrite("report_imgs/hsv/binary_masks/combined/{}.jpg".format(frame_count), fg_mask_dilated)
-                #     cv2.imwrite("report_imgs/hsv/outputs/{}.jpg".format(frame_count), out)
-
-                if writer:
-                    writer.write(cv2.resize(out, dsize=(width, height)))
                 
                 # keep track of time
                 time_out = time.perf_counter()
@@ -129,7 +122,7 @@ def run():
         writer.release()
 
 
-
-
 if __name__ == "__main__":
-    run()
+    parser = build_argparser()
+    kwargs = vars(parser.parse_args())
+    run(**kwargs)

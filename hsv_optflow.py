@@ -22,48 +22,39 @@ Authors: M. Farina, F. Diprima - University of Trento
 Last Update (dd/mm/yyyy): 03/04/2021 
 """
 
+import os
 import cv2
 import time
 import numpy as np
-
-# initialize video capture
-cap = cv2.VideoCapture(0)
-fps = int(cap.get(cv2.CAP_PROP_FPS))
-ms = int(1000/fps)
-
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-# initialize video writer
-codec = cv2.VideoWriter_fourcc(*'mp4v')
-writer = cv2.VideoWriter('report_videos/optflow.mp4', codec, fps, frameSize=(width, height))
-
-# define the variables for image-processing tasks
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(3,5))
-n_rows = 480
-n_cols = 720
-dst_size = (n_cols, n_rows)
-dst_shape = (n_rows, n_cols, 3)
-bg_frame_limit = fps * 3  # number of frames in 3 seconds
-gauss_kernel = (25,25)
-median_ksize = 15
-
-# setup an image to replace the background
-bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
-bg_pic = cv2.imread(bg_pic_path)
-bg_pic = cv2.resize(bg_pic, dst_size)
+from helpers.variables import *
+from helpers.utils import build_argparser, codec_from_ext, make_folder, recursive_clean
 
 
-def run():
+def run(**kwargs):
     """
-        Main loop for background removal. Uses frame differencing together with
-        morphological operators to separate background from foreground for videoconferencing.
-    """
+        Main loop for background removal.
+    """ 
     time_lst = [0]
     
+    # setup an image for the background
+    bg_pic_path = kwargs['background']
+    bg_pic = cv2.imread(bg_pic_path)
+    bg_pic = cv2.resize(bg_pic, dst_size)
+
+    # setup the video writer if needed
+    writer = None
+    if kwargs["output_video"]:
+        codec = codec_from_ext(kwargs["output_video"])
+        writer = cv2.VideoWriter(kwargs["output_video"], codec, fps, frameSize=(width, height))
+
+    # create the output frame folder if needed
+    if kwargs["frame_folder"]:
+        if kwargs["refresh"]: recursive_clean(kwargs["frame_folder"])
+        make_folder(kwargs["frame_folder"])
+    
     # initialize background
-    hsv_bg = np.zeros(dst_shape, dtype='uint16')
-    black_bg = np.zeros(dst_shape[:-1], dtype='uint8')
+    hsv_bg = np.zeros(dst_shape_multi, dtype='uint16')
+    black_bg = np.zeros(dst_shape_multi[:-1], dtype='uint8')
 
     # initialize vector of points for opticalFlow
     start_points = np.array([], dtype=np.float32)
@@ -95,27 +86,39 @@ def run():
             # when the bg has been modeled, segment the fg
             else:
                 time_in = time.perf_counter()
+
+                # check if we should behave 'normally' or use opt-flow
                 if mask_saved:
+
+                    # if it is the first frame of the opt-flow method, initilize pts
+                    # to be tracked ith the previous mask
                     if len(start_points) == 0:
                         indices = np.where(fg_mask_closed == 255)
                         start_points = np.array([[round(indices[1][i]), round(indices[0][i])] for i in range(len(indices[0]))], dtype=np.float32)
                         points = start_points
                         status = np.array([[1]]*len(points))
+                    
+                    # otherwise, run the Lucas Kanade algorithm
                     else:
                         prev_points = np.array(points, dtype=np.float32)
                         points, status, error = cv2.calcOpticalFlowPyrLK(prev_gray, gray_frame, prev_points, None, winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
                     
+                    # retain only points successfully tracked
                     point_set = np.array(points, dtype=np.int32)
                     point_set_ = point_set.copy()[status[:,0]==1]
+                    
+                    # discard out of bounds indices
                     rows = point_set_[:, 1]
                     max_row_shift = max(rows) - n_rows + 1 if max(rows) >= n_rows else 1 
                     cols = point_set_[:, 0]
                     max_col_shift = max(cols) - n_cols + 1 if max(cols) >= n_cols else 1
                     rows = rows - max_row_shift
                     cols = cols - max_col_shift
+                    
+                    # build a convex hull around the tracked points and use it as a mask
                     fg_mask_closed = black_bg.copy()
                     fg_mask_closed[rows, cols] = 255
-                    fg_mask_closed = cv2.medianBlur(fg_mask_closed.copy(), ksize=15)
+                    fg_mask_closed = cv2.medianBlur(fg_mask_closed.copy(), ksize=median_ksize)
                     point_set_median = np.where(fg_mask_closed == 255)
                     point_set_median = np.array([[round(point_set_median[1][i]), round(point_set_median[0][i])] for i in range(len(point_set_median[0]))], dtype=np.float32)                    
                     if len(point_set_median) > 0:
@@ -144,16 +147,10 @@ def run():
                 background = bg_pic - cv2.bitwise_and(bg_pic, bg_pic, mask=fg_mask_closed)
                 
                 # ... and add them to generate the output image
-                output_weighted = cv2.addWeighted(foreground, 0.8, bg_pic, 0.2, 0)
                 out = cv2.add(foreground, background)
                 
                 # display the output and the masks
-                cv2.imshow("Background vs Foreground", cv2.hconcat([background, foreground]))
-                cv2.imshow("Output - Weighted vs Original", cv2.hconcat([output_weighted, out]))
-                try:
-                    cv2.imshow("Optical Flow Mask", fg_mask_closed)
-                except Exception as e:
-                    print("Not showing opt flow mask for this reason: ", e)
+                cv2.imshow("Output", out)
             
                 # quit if needed
                 key = cv2.waitKey(ms)
@@ -164,19 +161,20 @@ def run():
                 elif key == ord('s'):
                     mask_saved = True
                        
-                # if user presses 'r', reset the background model:
+                # if user presses 'r', reset the background model
                 elif key == ord('r'):
                     mask_saved = False
                     start_points = np.array([], dtype=np.float32)
                     frame_count = -1
-                    hsv_bg = np.zeros(dst_shape, dtype='uint16')
+                    hsv_bg = np.zeros(dst_shape_multi, dtype='uint16')
                 
-                # if writer:
-                #     writer.write(cv2.resize(out, dsize=(width, height)))
+                # write the video on the fs if the user requested it
+                if writer:
+                    writer.write(cv2.resize(out, dsize=(width, height)))
                 
-                # if mask_saved and frame_count % 10 == 0:
-                #     cv2.imwrite("report_imgs/optflow/binary_masks/{}.jpg".format(frame_count), fg_mask_closed)
-                #     cv2.imwrite("report_imgs/optflow/outputs/{}.jpg".format(frame_count), out)
+                # save frames on the fs if the user requested it
+                if kwargs["frame_folder"] and frame_count % kwargs["throttle"] == 0:
+                    cv2.imwrite(os.path.join(kwargs["frame_folder"], "{}.jpg".format(frame_count - bg_frame_limit + 1)), out)
 
                 # keep track of time
                 time_out = time.perf_counter()
@@ -193,4 +191,6 @@ def run():
         writer.release()
 
 if __name__ == "__main__":
-    run()
+    parser = build_argparser()
+    kwargs = vars(parser.parse_args())
+    run(**kwargs)

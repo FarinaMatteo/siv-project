@@ -13,42 +13,39 @@ The result is clearly unsatisfactory. Check 'hsv.py', 'trackbars.py' and 'hsv_op
 Authors: M. Farina, F. Diprima - University of Trento
 Last Update (dd/mm/yyyy): 28/03/2021 
 """
+
+import os
 import cv2
+import time
 import numpy as np
+from helpers.variables import *
+from helpers.utils import build_argparser, codec_from_ext, make_folder, recursive_clean
 
-# initialize video capture
-cap = cv2.VideoCapture(0)
-fps = int(cap.get(cv2.CAP_PROP_FPS))
-ms = int(1000/fps)
 
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-# initialize video writer
-codec = cv2.VideoWriter_fourcc(*'mp4v')
-writer = cv2.VideoWriter('report_videos/main.mp4', codec, fps, frameSize=(width, height))
-
-# define the variables for image-processing tasks
-n_rows = 480
-n_cols = 720
-dst_size = (n_cols, n_rows)
-dst_shape = (n_rows, n_cols)
-bg_frame_limit = fps * 3  # number of frames in 3 seconds
-gauss_kernel = (15,15)
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(3,5))
-
-# setup an image to replace the background
-bg_pic_path = "/home/teofa/Pictures/Background/catalina-day.jpg"
-bg_pic = cv2.imread(bg_pic_path)
-bg_pic = cv2.resize(bg_pic, dst_size)
-
-def run():
+def run(**kwargs):
     """
-        Main loop for background removal. Uses frame differencing together with
-        morphological operators to separate background from foreground for videoconferencing.
+        Main loop for background removal.
     """
+    time_lst = [0]
+
+    # setup an image for the background
+    bg_pic_path = kwargs['background']
+    bg_pic = cv2.imread(bg_pic_path)
+    bg_pic = cv2.resize(bg_pic, dst_size)
+
+    # setup the video writer if needed
+    writer = None
+    if kwargs["output_video"]:
+        codec = codec_from_ext(kwargs["output_video"])
+        writer = cv2.VideoWriter(kwargs["output_video"], codec, fps, frameSize=(width, height))
+
+    # create the output frame folder if needed
+    if kwargs["frame_folder"]:
+        if kwargs["refresh"]: recursive_clean(kwargs["frame_folder"])
+        make_folder(kwargs["frame_folder"])
+    
     # initialize background
-    gray_bg = np.zeros(dst_shape, dtype='uint16')
+    gray_bg = np.zeros(dst_shape_gray, dtype='uint16')
     
     # start looping through frames
     frame_count = 0
@@ -72,6 +69,7 @@ def run():
 
             # when the bg has been modeled, segment the fg
             else:
+                time_in = time.perf_counter()
                 diff = cv2.absdiff(gray_frame_blurred, gray_bg)
                 
                 # threshold the difference to get the fg mask
@@ -92,30 +90,35 @@ def run():
                 # display the output and the masks
                 cv2.imshow("Output", out_otsu)
 
-                # write imgs
-                # if frame_count % 10 == 0:
-                #     cv2.imwrite("report_imgs/grayscale/gray_masks/{}.jpg".format(frame_count), diff)
-                #     cv2.imwrite("report_imgs/grayscale/binary_masks/{}.jpg".format(frame_count), fg_mask_otsu_eroded)
-                #     cv2.imwrite("report_imgs/grayscale/outputs/{}.jpg".format(frame_count), out_otsu)
+                # write frames if the user requested it
+                if kwargs["frame_folder"] and frame_count % kwargs["throttle"] == 0:
+                    cv2.imwrite(os.path.join(kwargs["frame_folder"], "{}.jpg".format(frame_count - bg_frame_limit + 1)), out_otsu)
 
-
+                # append the current frame to the output video if the user requested it
+                if writer:
+                    writer.write(cv2.resize(out_otsu, dsize=(width, height)))
+                
                 # quit if needed
                 if cv2.waitKey(ms) & 0xFF==ord('q'):
                     break
 
-                # if writer:
-                #     writer.write(cv2.resize(out_otsu, dsize=(width, height)))
+                # keep track of time
+                time_out = time.perf_counter()
+                time_diff = time_out - time_in
+                time_lst.append(time_diff)
                 
             
             frame_count += 1
 
+    # clean resource usage
+    print("Average Time x Frame: ", round(np.sum(np.array(time_lst))/len(time_lst), 2))
     cv2.destroyAllWindows()
     cap.release()
     if writer:
         writer.release()
 
 
-
-
 if __name__ == "__main__":
-    run()
+    parser = build_argparser()
+    kwargs = vars(parser.parse_args())
+    run(**kwargs)
