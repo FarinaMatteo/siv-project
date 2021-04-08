@@ -13,7 +13,7 @@ This script does the following:
 - uses the mask, the current video stream and a pre-defined background picture to produce the final output.  
   
 Authors: M. Farina, F. Diprima - University of Trento
-Last Update (dd/mm/yyyy): 03/04/2021  
+Last Update (dd/mm/yyyy): 09/04/2021  
 """
 
 import os

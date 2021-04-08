@@ -19,7 +19,7 @@ Additionally, the script provides methods to reset the background (by pressing t
 - the resulting mask is then used with logical bitwise operators to separate foreground and background.   
    
 Authors: M. Farina, F. Diprima - University of Trento
-Last Update (dd/mm/yyyy): 03/04/2021 
+Last Update (dd/mm/yyyy): 09/04/2021 
 """
 
 import os

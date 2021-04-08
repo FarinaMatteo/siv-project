@@ -11,7 +11,7 @@ This script does the following:
 The result is clearly unsatisfactory. Check 'hsv.py', 'trackbars.py' and 'hsv_optflow.py' for significant improvements.  
 
 Authors: M. Farina, F. Diprima - University of Trento
-Last Update (dd/mm/yyyy): 28/03/2021 
+Last Update (dd/mm/yyyy): 09/04/2021 
 """
 
 import os
@@ -77,13 +77,13 @@ def run(**kwargs):
                 
                 # perform low-pass and morphological operations on the masks
                 fg_mask_otsu_closed = cv2.morphologyEx(fg_mask_otsu, cv2.MORPH_CLOSE, kernel=kernel, iterations=3)
-                fg_mask_otsu_eroded = cv2.erode(fg_mask_otsu_closed, kernel=kernel)
+                fg_mask_otsu_dilated = cv2.dilate(fg_mask_otsu_closed, kernel=kernel)
                 
                 # use the masks to invert them and build the bg ones
-                bg_mask_otsu = cv2.bitwise_not(fg_mask_otsu_eroded)
+                bg_mask_otsu = cv2.bitwise_not(fg_mask_otsu_dilated)
                 
                 # use the masks to compute fg and bg images
-                fg_otsu = cv2.bitwise_and(frame, frame, mask=fg_mask_otsu_eroded)
+                fg_otsu = cv2.bitwise_and(frame, frame, mask=fg_mask_otsu_dilated)
                 bg_otsu = cv2.bitwise_and(bg_pic, bg_pic, mask=bg_mask_otsu)
                 out_otsu = fg_otsu + bg_otsu
                 
