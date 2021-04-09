@@ -2,7 +2,7 @@
   
 
 ## Introduction  
-This repository will contain code and documentation concerning the final project for the course *Signal, Image & Video* taught at **University of Trento**.  
+This repository contains code and documentation of the final project developed for the course *Signal, Image & Video* taught at **University of Trento**.  
 
 The aim of the project is to develop a "video-conferencing-like" algorithm to segment background and foreground, in order to run an image composition procedure for background substitution. 
 
@@ -30,7 +30,7 @@ Different proposed techniques are provided within different python files.
 - The default implementation in __gray.py__  uses gray scale frame differencing in order to segment the foreground and the background;  
 - An improved implementation can be found in __hsv.py__ , where the HSV colorspace is leveraged in order to take into account the contribution of both brightness and saturation channels to segment the background and the foreground;  
 - A customizable implementation in __trackbars.py__ lets users interactively configure proper values for the thresholds related to the saturation and the brightness masks. The default implementation of thresholding in the other scripts is based on Otsu's method.
-- A latter script allows to use the __Lukas - Kanade Optical Flow algorithm__ to keep track of the foreground mask over time. This can be found in __optflow.py__.
+- A latter script allows to use the __Lucas - Kanade Optical Flow algorithm__ to keep track of the foreground mask over time. This can be found in __optflow.py__.
   
 
 ## Run the code  
@@ -58,10 +58,34 @@ optional arguments:
   -ov OUTPUT_VIDEO, --output_video OUTPUT_VIDEO  
                         Path to the output video generated concatenating processed frames. No output video will be generated if this argument is not given. It must be relative to the location of the script that you're running.
 ```  
-A background model is acquired during the first 3 seconds of the video captured via your Webcam, so we suggest staying out of the scene during that interval.  
-Each script can be safely exited by pressing *q* on your keyboard.
+In the snippets below, examples are shown in order to launch each of the four scripts mentioned in the introductory section with the command line 
+argument to configure the output frame folder as *my_frames* under this project directory:  
+1. __Grayscale based background vs foreground segmentation__:  
+  ```
+  (<your-env-name>) $ python gray.py --frame_folder my_frames
+  ```  
+2. __HSV based background vs foreground segmentation__:
+  ```
+  (<your-env-name>) $ python hsv.py --frame_folder my_frames
+  ```  
+3. __HSV based with trackbars settings__:
+  ```
+  (<your-env-name>) $ python trackbars.py --frame_folder my_frames
+  ```  
+4. __HSV based with Lucas-Kanade Optical Flow settings__:
+  ```
+  (<your-env-name>) $ python optflow.py --frame_folder my_frames
+  ```  
   
+When a script is running, press the **q** key on your keyboard to exit at any time.  
 In the __optflow.py__ implementation, moreover, additional actions can be performed while the script is running:  
 - the **s** key means "save", so starting from the moment it is pressed, the current visible points of the foreground will be tracked with the Lukas - Kanade algorithm;  
 - the **r** key means "reset", so when it is pressed the algorithm re-builds a background model. This is useful for situations when the Optical Flow tracking becomes unstable. After pressing the key, please get out of the scene for 3s.  
+  
+### Additional Notes  
+A background model is acquired during the first 3 seconds of the video captured by your Webcam. Thus, we suggest staying out of the scene during that interval for better results.  
+  
+The above snippets showing how to run the scripts are nothing more than pure examples. You can obviously add, tweak or omit any command line argument.  
+
+
   
