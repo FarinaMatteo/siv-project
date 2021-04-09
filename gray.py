@@ -76,7 +76,7 @@ def run(**kwargs):
                 r_otsu, fg_mask_otsu = cv2.threshold(diff, 1, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
                 
                 # perform low-pass and morphological operations on the masks
-                fg_mask_otsu_closed = cv2.morphologyEx(fg_mask_otsu, cv2.MORPH_CLOSE, kernel=kernel, iterations=3)
+                fg_mask_otsu_closed = cv2.morphologyEx(fg_mask_otsu, cv2.MORPH_CLOSE, kernel=kernel, iterations=10)
                 fg_mask_otsu_dilated = cv2.dilate(fg_mask_otsu_closed, kernel=kernel)
                 
                 # use the masks to invert them and build the bg ones

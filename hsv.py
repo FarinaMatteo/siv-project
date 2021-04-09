@@ -84,7 +84,7 @@ def run(**kwargs):
                 s_diff_thresh_median = cv2.medianBlur(s_diff_thresh, ksize=median_ksize)
                 fg_mask = s_diff_thresh_median + v_diff_thresh
                 fg_mask_closed = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel=kernel, iterations=10)
-                fg_mask_dilated = cv2.dilate(fg_mask_closed, kernel=kernel, iterations=3)
+                fg_mask_dilated = cv2.dilate(fg_mask_closed, kernel=kernel)
                 
                 # compute the actual foreground and background
                 foreground = cv2.bitwise_and(frame, frame, mask=fg_mask_dilated)
