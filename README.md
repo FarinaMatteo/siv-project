@@ -26,7 +26,7 @@ $ conda activate <your-env-name>
 ```  
 
 ## What's inside this repo?  
-Different proposed techniques are provided within different python files. 
+Different proposed techniques are provided within different python files. The report explaining all of them is *siv-report-bg-vs-fg-segmentation_farina-matteo-221252_diprima-federico-224400.pdf*.  
 - The default implementation in __gray.py__  uses gray scale frame differencing in order to segment the foreground and the background;  
 - An improved implementation can be found in __hsv.py__ , where the HSV colorspace is leveraged in order to take into account the contribution of both brightness and saturation channels to segment the background and the foreground;  
 - A customizable implementation in __trackbars.py__ lets users interactively configure proper values for the thresholds related to the saturation and the brightness masks. The default implementation of thresholding in the other scripts is based on Otsu's method.
